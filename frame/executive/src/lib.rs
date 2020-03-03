@@ -58,6 +58,7 @@
 //! # pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 //! # pub type Balances = u64;
 //! # pub type AllModules = u64;
+//! # pub type Dispatcher = ();
 //! # pub enum Runtime {};
 //! # use sp_runtime::transaction_validity::{TransactionValidity, UnknownTransaction};
 //! # use sp_runtime::traits::ValidateUnsigned;
@@ -69,7 +70,7 @@
 //! # 	}
 //! # }
 //! /// Executive: handles dispatch to the various modules.
-//! pub type Executive = executive::Executive<Runtime, Block, Context, Runtime, AllModules>;
+//! pub type Executive = executive::Executive<Runtime, Block, Context, Runtime, AllModules, Dispatcher>;
 //! ```
 
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -98,8 +99,15 @@ pub type CheckedOf<E, C> = <E as Checkable<C>>::Checked;
 pub type CallOf<E, C> = <CheckedOf<E, C> as Applyable>::Call;
 pub type OriginOf<E, C> = <CallOf<E, C> as Dispatchable>::Origin;
 
-pub struct Executive<System, Block, Context, UnsignedValidator, AllModules>(
-	PhantomData<(System, Block, Context, UnsignedValidator, AllModules)>
+pub struct Executive<System, Block, Context, UnsignedValidator, AllModules, Dispatcher>(
+	PhantomData<(
+		System,
+		Block,
+		Context,
+		UnsignedValidator,
+		AllModules,
+		Dispatcher,
+	)>,
 );
 
 impl<
@@ -113,7 +121,8 @@ impl<
 		OnFinalize<System::BlockNumber> +
 		OffchainWorker<System::BlockNumber> +
 		WeighBlock<System::BlockNumber>,
-> ExecuteBlock<Block> for Executive<System, Block, Context, UnsignedValidator, AllModules>
+	Dispatcher: traits::Dispatcher<CallOf<Block::Extrinsic, Context>>,
+> ExecuteBlock<Block> for Executive<System, Block, Context, UnsignedValidator, AllModules, Dispatcher>
 where
 	Block::Extrinsic: Checkable<Context> + Codec,
 	CheckedOf<Block::Extrinsic, Context>:
@@ -121,10 +130,10 @@ where
 		GetDispatchInfo,
 	CallOf<Block::Extrinsic, Context>: Dispatchable,
 	OriginOf<Block::Extrinsic, Context>: From<Option<System::AccountId>>,
-	UnsignedValidator: ValidateUnsigned<Call=CallOf<Block::Extrinsic, Context>>,
+	UnsignedValidator: ValidateUnsigned<Call = CallOf<Block::Extrinsic, Context>>,
 {
 	fn execute_block(block: Block) {
-		Executive::<System, Block, Context, UnsignedValidator, AllModules>::execute_block(block);
+		Executive::<System, Block, Context, UnsignedValidator, AllModules, Dispatcher>::execute_block(block);
 	}
 }
 
@@ -139,7 +148,8 @@ impl<
 		OnFinalize<System::BlockNumber> +
 		OffchainWorker<System::BlockNumber> +
 		WeighBlock<System::BlockNumber>,
-> Executive<System, Block, Context, UnsignedValidator, AllModules>
+	Dispatcher: traits::Dispatcher<CallOf<Block::Extrinsic, Context>>,
+> Executive<System, Block, Context, UnsignedValidator, AllModules, Dispatcher>
 where
 	Block::Extrinsic: Checkable<Context> + Codec,
 	CheckedOf<Block::Extrinsic, Context>:
@@ -147,7 +157,7 @@ where
 		GetDispatchInfo,
 	CallOf<Block::Extrinsic, Context>: Dispatchable,
 	OriginOf<Block::Extrinsic, Context>: From<Option<System::AccountId>>,
-	UnsignedValidator: ValidateUnsigned<Call=CallOf<Block::Extrinsic, Context>>,
+	UnsignedValidator: ValidateUnsigned<Call = CallOf<Block::Extrinsic, Context>>,
 {
 	/// Start the execution of a particular block.
 	pub fn initialize_block(header: &System::Header) {
@@ -310,9 +320,13 @@ where
 
 		// Decode parameters and dispatch
 		let dispatch_info = xt.get_dispatch_info();
-		let r = Applyable::apply::<UnsignedValidator>(xt, dispatch_info, encoded_len)?;
+		let r = Applyable::apply::<UnsignedValidator, Dispatcher>(xt, dispatch_info, encoded_len)?;
 
-		<frame_system::Module<System>>::note_applied_extrinsic(&r, encoded_len as u32, dispatch_info);
+		<frame_system::Module<System>>::note_applied_extrinsic(
+			&r,
+			encoded_len as u32,
+			dispatch_info,
+		);
 
 		Ok(r)
 	}
@@ -544,7 +558,7 @@ mod tests {
 	);
 	type AllModules = (System, Balances, Custom);
 	type TestXt = sp_runtime::testing::TestXt<Call, SignedExtra>;
-	type Executive = super::Executive<Runtime, Block<TestXt>, ChainContext<Runtime>, Runtime, AllModules>;
+	type Executive = super::Executive<Runtime, Block<TestXt>, ChainContext<Runtime>, Runtime, AllModules, ()>;
 
 	fn extra(nonce: u64, fee: u64) -> SignedExtra {
 		(

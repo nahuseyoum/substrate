@@ -888,7 +888,7 @@ impl SignedExtension for () {
 /// each piece of attributable information to be disambiguated.
 pub trait Applyable: Sized + Send + Sync {
 	/// Type by which we can dispatch. Restricts the `UnsignedValidator` type.
-	type Call;
+	type Call: Dispatchable;
 
 	/// An opaque set of information attached to the transaction.
 	type DispatchInfo: Clone;
@@ -902,11 +902,27 @@ pub trait Applyable: Sized + Send + Sync {
 
 	/// Executes all necessary logic needed prior to dispatch and deconstructs into function call,
 	/// index and sender.
-	fn apply<V: ValidateUnsigned<Call=Self::Call>>(
+	fn apply<V: ValidateUnsigned<Call = Self::Call>, D: Dispatcher<Self::Call>>(
 		self,
 		info: Self::DispatchInfo,
 		len: usize,
 	) -> crate::ApplyExtrinsicResult;
+}
+
+/// A `Dispatcher` is a type that dispatches a `Dispatchable`.
+///
+/// Its responsibility is to do central bookkeeping like tracking unspent gas in
+/// addition to the raw dispatch. Please note that `Dispatchable::dispatch` should
+/// not be called directly but always through a `Dispatcher`.
+pub trait Dispatcher<D: Dispatchable> {
+	/// This may do some bookkeeping but must eventually call `dispathchable.dispatch`.
+	fn dispatch(dispatchable: D, origin: <D as Dispatchable>::Origin) -> crate::DispatchResult;
+}
+
+impl<D: Dispatchable> Dispatcher<D> for () {
+	fn dispatch(dispatchable: D, origin: <D as Dispatchable>::Origin) -> crate::DispatchResult {
+		dispatchable.dispatch(origin)
+	}
 }
 
 /// A marker trait for something that knows the type of the runtime block.

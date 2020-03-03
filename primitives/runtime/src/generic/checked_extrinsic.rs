@@ -17,10 +17,8 @@
 //! Generic implementation of an extrinsic that has passed the verification
 //! stage.
 
-use crate::traits::{
-	self, Member, MaybeDisplay, SignedExtension, Dispatchable,
-};
 use crate::traits::ValidateUnsigned;
+use crate::traits::{self, Dispatchable, Dispatcher, MaybeDisplay, Member, SignedExtension};
 use crate::transaction_validity::TransactionValidity;
 
 /// Definition of something that the external world might want to say; its
@@ -36,12 +34,12 @@ pub struct CheckedExtrinsic<AccountId, Call, Extra> {
 	pub function: Call,
 }
 
-impl<AccountId, Call, Extra, Origin, Info> traits::Applyable for
-	CheckedExtrinsic<AccountId, Call, Extra>
+impl<AccountId, Call, Extra, Origin, Info> traits::Applyable
+	for CheckedExtrinsic<AccountId, Call, Extra>
 where
 	AccountId: Member + MaybeDisplay,
-	Call: Member + Dispatchable<Origin=Origin>,
-	Extra: SignedExtension<AccountId=AccountId, Call=Call, DispatchInfo=Info>,
+	Call: Member + Dispatchable<Origin = Origin>,
+	Extra: SignedExtension<AccountId = AccountId, Call = Call, DispatchInfo = Info>,
 	Origin: From<Option<AccountId>>,
 	Info: Clone,
 {
@@ -62,21 +60,42 @@ where
 		}
 	}
 
-	fn apply<U: ValidateUnsigned<Call=Self::Call>>(
+	fn apply<U: ValidateUnsigned<Call = Self::Call>, D: Dispatcher<Self::Call>>(
 		self,
 		info: Self::DispatchInfo,
 		len: usize,
 	) -> crate::ApplyExtrinsicResult {
-		let (maybe_who, pre) = if let Some((id, extra)) = self.signed {
-			let pre = Extra::pre_dispatch(extra, &id, &self.function, info.clone(), len)?;
-			(Some(id), pre)
-		} else {
-			let pre = Extra::pre_dispatch_unsigned(&self.function, info.clone(), len)?;
-			U::pre_dispatch(&self.function)?;
-			(None, pre)
-		};
-		let res = self.function.dispatch(Origin::from(maybe_who));
-		Extra::post_dispatch(pre, info.clone(), len);
-		Ok(res.map_err(Into::into))
+		apply::<U, D, _, _, _, _, _>(self.function, self.signed, info, len)
 	}
+}
+
+/// Apply a call together with its signature (if any).
+///
+/// This function is exposed in order for test code to make use of it. Production
+/// code may use the `Applyable` implementation of `CheckedExtrinsic`.
+pub fn apply<U, D, Info, Call, Extra, Origin, AccountId>(
+	call: Call,
+	signature: Option<(AccountId, Extra)>,
+	info: Info,
+	len: usize,
+) -> crate::ApplyExtrinsicResult
+where
+	Origin: From<Option<AccountId>>,
+	Call: Member + Dispatchable<Origin = Origin>,
+	AccountId: Member + MaybeDisplay,
+	Info: Clone,
+	Extra: SignedExtension<AccountId = AccountId, Call = Call, DispatchInfo = Info>,
+	U: ValidateUnsigned<Call = Call>,
+	D: Dispatcher<Call>,
+{
+	let (maybe_who, pre) = if let Some((who, extra)) = signature {
+		let pre = Extra::pre_dispatch(extra, &who, &call, info.clone(), len)?;
+		(Some(who), pre)
+	} else {
+		let pre = Extra::pre_dispatch_unsigned(&call, info.clone(), len)?;
+		(None, pre)
+	};
+	let r = D::dispatch(call, maybe_who.into()).map_err(Into::into);
+	Extra::post_dispatch(pre, info.clone(), len);
+	Ok(r)
 }
