@@ -55,6 +55,8 @@ use sp_transaction_pool::{MaintainedTransactionPool, ChainEvent};
 use sp_blockchain;
 use prometheus_endpoint::{register, Gauge, U64, F64, Registry, PrometheusError, Opts, GaugeVec};
 
+use sp_consensus::BlockOrigin;
+
 struct ServiceMetrics {
 	block_height_number: GaugeVec<U64>,
 	ready_transactions_number: Gauge<U64>,
@@ -924,26 +926,25 @@ ServiceBuilder<
 			let is_validator = config.roles.is_authority();
 
 			let (import_stream, finality_stream) = (
-				futures::stream::select(client.import_notification_stream(), client.initial_sync_import_notification_stream())
-					.map(|n| ChainEvent::NewBlock {
-						id: BlockId::Hash(n.hash),
+				client.all_blocks_notification_stream()
+					.map(|n| ChainEvent::BlockReceived {
 						header: n.header,
-						retracted: n.retracted,
+						is_initial_sync: n.origin == BlockOrigin::NetworkInitialSync,
 						is_new_best: n.is_new_best,
 					}),
 				client.finality_notification_stream().map(|n| ChainEvent::Finalized {
 					hash: n.hash
 				}),
 			);
-
+			
 			// process block import and block finalization events
 			let events = futures::stream::select(import_stream, finality_stream )
 				.for_each(move |event| {
 					// offchain worker is only interested in block import events
-					if let ChainEvent::NewBlock { ref header, is_new_best, .. } = event {
+					if let ChainEvent::BlockReceived { ref header, is_new_best, is_initial_sync, .. } = event {
 						let offchain = offchain.as_ref().and_then(|o| o.upgrade());
 						match offchain {
-							Some(offchain) if is_new_best => {
+							Some(offchain) if is_initial_sync || is_new_best => {
 								notifications_spawn_handle.spawn(
 									"offchain-on-block",
 									offchain.on_block_imported(

@@ -36,8 +36,8 @@ pub type ImportNotifications<Block> = mpsc::UnboundedReceiver<BlockImportNotific
 pub type FinalityNotifications<Block> = mpsc::UnboundedReceiver<FinalityNotification<Block>>;
 
 
-/// A stream of block finality notifications during the initial sync.
-pub type InitialSyncBlockImportNotifications<Block> = mpsc::UnboundedReceiver<BlockImportNotification<Block>>;
+/// A stream of block import events.
+pub type AllBlocksNotifications<Block> = mpsc::UnboundedReceiver<AllBlocksNotification<Block>>;
 
 /// Expected hashes of blocks at given heights.
 ///
@@ -67,8 +67,9 @@ pub trait BlockchainEvents<Block: BlockT> {
 	/// finalized block.
 	fn finality_notification_stream(&self) -> FinalityNotifications<Block>;
 
-	/// Get a stream of finality notification originating from the initial block import
-	fn initial_sync_import_notification_stream(&self) -> InitialSyncBlockImportNotifications<Block>;
+	/// Get a block import stream of notification. Guaranteed to be fired for every
+	/// imported block.
+	fn all_blocks_notification_stream(&self) -> AllBlocksNotifications<Block>;
 
 	/// Get storage changes event stream.
 	///
@@ -241,4 +242,20 @@ pub struct FinalityNotification<Block: BlockT> {
 	pub hash: Block::Hash,
 	/// Imported block header.
 	pub header: Block::Header,
+}
+
+
+/// Summary of an imported block
+#[derive(Clone, Debug)]
+pub struct AllBlocksNotification<Block: BlockT> {
+	/// Determines if this block notification is part
+	/// of an initial sync of the node with the network.
+	/// Imported block header hash.
+	pub hash: Block::Hash,
+	/// Imported block origin.
+	pub origin: BlockOrigin,
+	/// Imported block header.
+	pub header: Block::Header,
+	/// Is this the new best block.
+	pub is_new_best: bool,
 }

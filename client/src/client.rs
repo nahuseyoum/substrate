@@ -20,6 +20,7 @@ use std::{
 	marker::PhantomData, collections::{HashSet, BTreeMap, HashMap}, sync::Arc, panic::UnwindSafe,
 	result,
 };
+
 use log::{info, trace, warn};
 use futures::channel::mpsc;
 use parking_lot::{Mutex, RwLock};
@@ -70,7 +71,8 @@ pub use sc_client_api::{
 		LockImportRun,
 	},
 	client::{
-		ImportNotifications, FinalityNotification, FinalityNotifications, InitialSyncBlockImportNotifications, BlockImportNotification,
+		ImportNotifications, FinalityNotification, FinalityNotifications, AllBlocksNotifications, BlockImportNotification,
+		AllBlocksNotification,
 		ClientInfo, BlockchainEvents, BlockBody, ProvideUncles, BadBlocks, ForkBlocks,
 		BlockOf,
 	},
@@ -95,8 +97,7 @@ pub struct Client<B, E, Block, RA> where Block: BlockT {
 	storage_notifications: Mutex<StorageNotifications<Block>>,
 	import_notification_sinks: Mutex<Vec<mpsc::UnboundedSender<BlockImportNotification<Block>>>>,
 	finality_notification_sinks: Mutex<Vec<mpsc::UnboundedSender<FinalityNotification<Block>>>>,
-	// TODO rename to OffchainWorkerReplay?
-	initial_sync_notification_sinks: Mutex<Vec<mpsc::UnboundedSender<BlockImportNotification<Block>>>>,
+	all_blocks_notification_sinks: Mutex<Vec<mpsc::UnboundedSender<AllBlocksNotification<Block>>>>,
 	// holds the block hash currently being imported. TODO: replace this with block queue
 	importing_block: RwLock<Option<Block::Hash>>,
 	block_rules: BlockRules<Block>,
@@ -245,6 +246,7 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 	B: backend::Backend<Block>,
 	E: CallExecutor<Block>,
 	Block: BlockT,
+	Block::Header: Clone,
 {
 	/// Creates new Substrate Client with given blockchain and code executor.
 	pub fn new<S: BuildStorage>(
@@ -281,7 +283,7 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 			storage_notifications: Default::default(),
 			import_notification_sinks: Default::default(),
 			finality_notification_sinks: Default::default(),
-			initial_sync_notification_sinks: Default::default(),
+			all_blocks_notification_sinks: Default::default(),
 			importing_block: Default::default(),
 			block_rules: BlockRules::new(fork_blocks, bad_blocks),
 			execution_extensions,
@@ -767,37 +769,29 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 
 		operation.op.insert_aux(aux)?;
 
+		
+		let header = import_headers.into_post();
+		let import_summary = ImportSummary {
+			hash,
+			origin,
+			header,
+			is_new_best,
+			storage_changes,
+			retracted,
+		};
+
+		self.notify_any_block_imported(
+			&import_summary
+		)?;
+
 		if make_notifications {
 			if finalized {
 				operation.notify_finalized.push(hash);
 			}
 
-			operation.notify_imported = Some(ImportSummary {
-				hash,
-				origin,
-				header: import_headers.into_post(),
-				is_new_best,
-				storage_changes,
-				retracted,
-			});
-		} else {
-			match origin {
-				// send a notification for the offchain workers
-				// which would not be notifice in the network initial sync
-				// case otherwise (see previous origin match statement)
-				BlockOrigin::NetworkInitialSync => {
-					self.notify_initial_sync_imported(ImportSummary {
-						hash,
-						origin,
-						header: import_headers.into_post(),
-						is_new_best,
-						storage_changes,
-						retracted,
-					})?;
-				},
-				_ => {}
-			}
+			operation.notify_imported = Some(import_summary);
 		}
+
 
 		Ok(ImportResult::imported(is_new_best))
 	}
@@ -984,26 +978,23 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 		Ok(())
 	}
 
-	fn notify_initial_sync_imported(&self, notify_import: ImportSummary<Block>) -> sp_blockchain::Result<()> {
-		if let Some(storage_changes) = notify_import.storage_changes {
-			// TODO [ToDr] How to handle re-orgs? Should we re-emit all storage changes?
-			self.storage_notifications.lock()
-				.trigger(
-					&notify_import.hash,
-					storage_changes.0.into_iter(),
-					storage_changes.1.into_iter().map(|(sk, v)| (sk, v.into_iter())),
-				);
-		}
+	fn notify_any_block_imported(&self, notify_import: &ImportSummary<Block>) -> sp_blockchain::Result<()> {
 
-		let notification = BlockImportNotification::<Block> {
-			hash: notify_import.hash,
-			origin: notify_import.origin,
-			header: notify_import.header,
+		let notification = AllBlocksNotification::<Block> {
+			hash: notify_import.hash.clone(),
+			origin: notify_import.origin.clone(),
+			header: notify_import.header.clone(),
 			is_new_best: notify_import.is_new_best,
-			retracted: notify_import.retracted,
 		};
 
-		self.initial_sync_notification_sinks.lock()
+		// FIXME impl proper backpressure - how far should the backpressure reach?
+		//
+		// let mut iter = self.all_blocks_notification_sinks.get_mut().iter_mut();
+		// 	iter.for_each(|sink : &mut mpsc::Sender<AllBlocksImportNotification<Block>>| {
+		// 		let _ = sink.try_send(notification.clone());
+		// 	});
+
+		self.all_blocks_notification_sinks.lock()
 			.retain(|sink| sink.unbounded_send(notification.clone()).is_ok());
 
 		Ok(())
@@ -1786,9 +1777,9 @@ where
 		stream
 	}
 
-	fn initial_sync_import_notification_stream(&self) -> InitialSyncBlockImportNotifications<Block> {
+	fn all_blocks_notification_stream(&self) -> AllBlocksNotifications<Block> {
 		let (sink, stream) = mpsc::unbounded();
-		self.initial_sync_notification_sinks.lock().push(sink);
+		self.all_blocks_notification_sinks.lock().push(sink);
 		stream
 	}
 
