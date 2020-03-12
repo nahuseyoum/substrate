@@ -35,4 +35,10 @@ sp_api::decl_runtime_apis! {
 		#[skip_initialize_block]
 		fn offchain_worker(header: &Block::Header);
 	}
+
+	#[api_version(2)]
+	pub trait OffchainWorkerIndexingApi {
+		/// Returns the metadata of a runtime.
+		fn offchain_write_kv_to_db(key : &[u8], value : &[u8]);
+	}
 }

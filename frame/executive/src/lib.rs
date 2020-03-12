@@ -359,6 +359,15 @@ where
 			header.number().saturating_sub(1.into())
 		)
 	}
+
+	/// write something to the offchain worker DB.
+	pub fn offchain_write_kv(key : &[u8], value : &[u8]) {
+		// Initialize logger, so the log messages are visible
+		// also when running WASM.
+		frame_support::debug::RuntimeLogger::init();
+
+		<AllModules as OffchainWorker<System::BlockNumber>>::offchain_write_kv(key, value);
+	}
 }
 
 

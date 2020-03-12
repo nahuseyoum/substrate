@@ -329,6 +329,13 @@ impl_runtime_apis! {
 		}
 	}
 
+
+	impl sp_offchain::OffchainWorkerIndexingApi<Block> for Runtime {
+		fn offchain_write_kv_to_db(key: &[u8], value: &[u8]) {
+			Executive::offchain_write_kv_to_db(key, value)
+		}
+	}
+
 	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
 		fn slot_duration() -> u64 {
 			Aura::slot_duration()
