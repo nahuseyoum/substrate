@@ -554,6 +554,20 @@ pub trait Hashing {
 	}
 }
 
+/// Interface that provides functions to access the offchain database access.
+#[runtime_interface]
+pub trait OffchainIndex {
+	/// Write a key value pair to the offchain worker database in a buffered fashion.
+	fn write_kv(&mut self, key : &[u8], value : &[u8]) {
+		// only makes sense if we are having offchain workers
+		if let Some(_) = self.extension::<OffchainExt>() {
+			unimplemented!("need config.offchain.enabled && config.offchain.enable_indexing values")
+		//} else {
+			// warn!("write a key-value-pair can be called in the runtime context");
+		}
+	}
+}
+
 /// Interface that provides functions to access the offchain functionality.
 #[runtime_interface]
 pub trait Offchain {
