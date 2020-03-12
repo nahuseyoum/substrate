@@ -172,7 +172,7 @@ pub struct OffchainWorkerConfig {
 	/// If this is allowed.
 	pub enabled: bool,
 	/// allow writes from the runtime to the offchain worker database
-	pub allow_runtime_write_to_ocw_db: bool,
+	pub indexing_enabled: bool,
 }
 
 /// Configuration of the Prometheus endpoint.

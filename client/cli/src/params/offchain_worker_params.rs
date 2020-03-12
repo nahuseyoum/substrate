@@ -52,14 +52,15 @@ pub struct OffchainWorkerParams {
     )]
     pub enabled: OffchainWorkerEnabled,
 
-	/// Allow writing from the runtime to the offchain worker database directly (buffered).
+	/// Allow access to offchain workers indexing API
 	/// 
-	// TODO the argument is way too long
+	/// Enables a runtime to write directly to a offchain workers
+	/// DB during block import.
     #[structopt(
-        long = "allow-write-to-offchain-worker-db",
-        value_name = "ALLOW_RUNTIME_WRITE_TO_OFFCHAIN_WORKER_DB"
+        long = "enable-offchain-worker-indexing",
+        value_name = "ENABLE_OFFCHAIN_WORKER_INDEXING"
     )]
-	pub allow_runtime_write_to_offchain_worker_db: bool,
+	pub indexing_enabled: bool,
 }
 
 impl OffchainWorkerParams {
@@ -79,13 +80,9 @@ impl OffchainWorkerParams {
 			(OffchainWorkerEnabled::WhenValidating, _) => false,
 		};
 
-        let allow_runtime_write_to_ocw_db = if enabled {
-				self.allow_runtime_write_to_offchain_worker_db
-			} else {
-				false
-			};
+        let indexing_enabled = enabled && self.indexing_enabled;
 
-        config.offchain_worker = OffchainWorkerConfig { enabled, allow_runtime_write_to_ocw_db};
+        config.offchain_worker = OffchainWorkerConfig { enabled, indexing_enabled};
 
         Ok(())
 	}
