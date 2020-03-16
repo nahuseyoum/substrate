@@ -564,6 +564,8 @@ pub trait OffchainIndex {
 }
 
 /// Interface that provides functions to access the offchain functionality.
+///
+/// These functions are being made available to the runtime and are called by the runtime.
 #[runtime_interface]
 pub trait Offchain {
 	/// Returns if the local node is a potential validator.

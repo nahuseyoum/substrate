@@ -27,6 +27,8 @@
 //!
 //! Besides the macros and the [`Core`] runtime api, this crates provides the [`Metadata`] runtime
 //! api, the [`ApiExt`] trait, the [`CallApiAt`] trait and the [`ConstructRuntimeApi`] trait.
+//!
+//! On a meta level this implies, the client calls the generated API from the client perspective.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
