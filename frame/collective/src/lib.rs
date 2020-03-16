@@ -555,20 +555,21 @@ mod tests {
 		type AccountData = ();
 		type MigrateAccount = (); type OnNewAccount = ();
 		type OnKilledAccount = ();
+		type RootDispatcher = ();
 	}
 	impl Trait<Instance1> for Test {
 		type Origin = Origin;
 		type Proposal = Call;
 		type Event = Event;
 		type MotionDuration = MotionDuration;
-		type Dispatcher = frame_system::Module<Test>;
+		type Dispatcher = <Self as frame_system::Trait>::RootDispatcher;
 	}
 	impl Trait for Test {
 		type Origin = Origin;
 		type Proposal = Call;
 		type Event = Event;
 		type MotionDuration = MotionDuration;
-		type Dispatcher = frame_system::Module<Test>;
+		type Dispatcher = <Self as frame_system::Trait>::RootDispatcher;
 	}
 
 	pub type Block = sp_runtime::generic::Block<Header, UncheckedExtrinsic>;

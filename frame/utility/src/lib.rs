@@ -633,6 +633,7 @@ mod tests {
 		type AccountData = pallet_balances::AccountData<u64>;
 		type MigrateAccount = (); type OnNewAccount = ();
 		type OnKilledAccount = ();
+		type RootDispatcher = ();
 	}
 	parameter_types! {
 		pub const ExistentialDeposit: u64 = 1;
@@ -656,7 +657,7 @@ mod tests {
 		type MultisigDepositBase = MultisigDepositBase;
 		type MultisigDepositFactor = MultisigDepositFactor;
 		type MaxSignatories = MaxSignatories;
-		type Dispatcher = System;
+		type Dispatcher = <Self as frame_system::Trait>::RootDispatcher;
 	}
 	type System = frame_system::Module<Test>;
 	type Balances = pallet_balances::Module<Test>;

@@ -160,6 +160,7 @@ mod tests {
 		type AccountData = ();
 		type MigrateAccount = (); type OnNewAccount = ();
 		type OnKilledAccount = ();
+		type RootDispatcher = ();
 	}
 
 	impl_outer_origin! {

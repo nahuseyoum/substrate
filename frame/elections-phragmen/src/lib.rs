@@ -827,6 +827,7 @@ mod tests {
 		type AccountData = pallet_balances::AccountData<u64>;
 		type MigrateAccount = (); type OnNewAccount = ();
 		type OnKilledAccount = ();
+		type RootDispatcher = ();
 	}
 
 	parameter_types! {

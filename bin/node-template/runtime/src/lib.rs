@@ -2,7 +2,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
-#![recursion_limit="256"]
+#![recursion_limit = "256"]
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
@@ -167,6 +167,7 @@ impl system::Trait for Runtime {
 	type OnKilledAccount = ();
 	/// The data to be stored in an account.
 	type AccountData = balances::AccountData<Balance>;
+	type RootDispatcher = system::Module<Self>;
 }
 
 impl aura::Trait for Runtime {
@@ -219,7 +220,7 @@ impl transaction_payment::Trait for Runtime {
 impl sudo::Trait for Runtime {
 	type Event = Event;
 	type Call = Call;
-	type Dispatcher = ();
+	type Dispatcher = <Self as system::Trait>::RootDispatcher;
 }
 
 /// Used for the module template in `./template.rs`

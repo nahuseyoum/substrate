@@ -1651,6 +1651,7 @@ mod tests {
 		type AccountData = pallet_balances::AccountData<u64>;
 		type MigrateAccount = (); type OnNewAccount = ();
 		type OnKilledAccount = ();
+		type RootDispatcher = ();
 	}
 	parameter_types! {
 		pub const ExistentialDeposit: u64 = 1;
@@ -1708,7 +1709,7 @@ mod tests {
 		type CooloffPeriod = CooloffPeriod;
 		type PreimageByteDeposit = PreimageByteDeposit;
 		type Slash = ();
-		type Dispatcher = frame_system::Module<Test>;
+		type Dispatcher = <Self as frame_system::Trait>::RootDispatcher;
 	}
 
 	fn new_test_ext() -> sp_io::TestExternalities {

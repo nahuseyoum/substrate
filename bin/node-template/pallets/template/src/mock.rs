@@ -48,6 +48,7 @@ impl system::Trait for Test {
 	type AccountData = ();
 	type MigrateAccount = (); type OnNewAccount = ();
 	type OnKilledAccount = ();
+	type RootDispatcher = ();
 }
 impl Trait for Test {
 	type Event = ();
