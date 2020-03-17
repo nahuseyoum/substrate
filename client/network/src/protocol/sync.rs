@@ -138,7 +138,7 @@ pub struct ChainSync<B: BlockT> {
 	block_announce_validator: Box<dyn BlockAnnounceValidator<B> + Send>,
 	/// Maximum number of peers to ask the same blocks in parallel.
 	max_parallel_downloads: u32,
-	/// Total numbet of processed blocks (imported or failed).
+	/// Total number of processed blocks (imported or failed).
 	processed_blocks: usize,
 }
 
