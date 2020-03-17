@@ -902,7 +902,10 @@ pub trait Applyable: Sized + Send + Sync {
 
 	/// Executes all necessary logic needed prior to dispatch and deconstructs into function call,
 	/// index and sender.
-	fn apply<V: ValidateUnsigned<Call = Self::Call>, D: Dispatcher<Self::Call>>(
+	fn apply<
+		V: ValidateUnsigned<Call = Self::Call>,
+		D: Dispatcher<Self::Call, <Self::Call as Dispatchable>::Origin>,
+	>(
 		self,
 		info: Self::DispatchInfo,
 		len: usize,
@@ -913,14 +916,14 @@ pub trait Applyable: Sized + Send + Sync {
 ///
 /// Its responsibility is to do bookkeeping addition to the raw dispatch. Please note
 /// that `Dispatchable::dispatch` should not be called directly but always from a `Dispatcher`.
-pub trait Dispatcher<D: Dispatchable> {
+pub trait Dispatcher<D, O> {
 	/// This may do some bookkeeping but must eventually call `dispatchable.dispatch`.
-	fn dispatch(dispatchable: D, origin: <D as Dispatchable>::Origin) -> crate::DispatchResult;
+	fn dispatch(dispatchable: D, origin: O) -> crate::DispatchResult;
 }
 
-impl<D: Dispatchable> Dispatcher<D> for () {
-	fn dispatch(dispatchable: D, origin: <D as Dispatchable>::Origin) -> crate::DispatchResult {
-		dispatchable.dispatch(origin)
+impl<D, O> Dispatcher<D, O> for () {
+	fn dispatch(_dispatchable: D, _origin: O) -> crate::DispatchResult {
+		Ok(())
 	}
 }
 

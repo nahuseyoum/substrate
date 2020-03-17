@@ -147,7 +147,7 @@ pub trait Trait: 'static + Eq + Clone {
 		+ Clone;
 
 	/// The aggregated `Call` type.
-	type Call: Debug + Dispatchable<Origin = Self::Origin>;
+	type Call: Debug;
 
 	/// Account index (aka nonce) type. This stores the number of previous transactions associated
 	/// with a sender account.
@@ -240,7 +240,7 @@ pub trait Trait: 'static + Eq + Clone {
 	/// itself. It is important to understand that by doing this the dispatch becomes
 	/// invisible to the rest of the runtime machinery which relies on the `RootDispatcher`
 	/// bookkeeping.
-	type RootDispatcher: sp_runtime::traits::Dispatcher<Self::Call>;
+	type RootDispatcher: sp_runtime::traits::Dispatcher<Self::Call, Self::Origin>;
 }
 
 pub type DigestOf<T> = generic::Digest<<T as Trait>::Hash>;
@@ -1055,7 +1055,9 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> sp_runtime::traits::Dispatcher<T::Call> for Module<T> {
+impl<T: Trait> sp_runtime::traits::Dispatcher<T::Call, T::Origin> for Module<T> where 
+	T::Call: Dispatchable<Origin = T::Origin>,
+{
 	fn dispatch(
 		dispatchable: T::Call,
 		origin: <T::Call as Dispatchable>::Origin,
@@ -1579,7 +1581,7 @@ mod tests {
 
 	impl Trait for Test {
 		type Origin = Origin;
-		type Call = Call<Test>;
+		type Call = ();
 		type Index = u64;
 		type BlockNumber = u64;
 		type Hash = H256;

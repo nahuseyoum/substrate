@@ -35,8 +35,7 @@ pub struct CheckedExtrinsic<AccountId, Call, Extra> {
 }
 
 impl<AccountId, Call, Extra, Origin, Info> traits::Applyable
-	for CheckedExtrinsic<AccountId, Call, Extra>
-where
+	for CheckedExtrinsic<AccountId, Call, Extra> where
 	AccountId: Member + MaybeDisplay,
 	Call: Member + Dispatchable<Origin = Origin>,
 	Extra: SignedExtension<AccountId = AccountId, Call = Call, DispatchInfo = Info>,
@@ -60,7 +59,7 @@ where
 		}
 	}
 
-	fn apply<U: ValidateUnsigned<Call = Self::Call>, D: Dispatcher<Self::Call>>(
+	fn apply<U: ValidateUnsigned<Call = Call>, D: Dispatcher<Call, Origin>>(
 		self,
 		info: Self::DispatchInfo,
 		len: usize,
@@ -78,15 +77,14 @@ pub fn apply<U, D, Info, Call, Extra, Origin, AccountId>(
 	signature: Option<(AccountId, Extra)>,
 	info: Info,
 	len: usize,
-) -> crate::ApplyExtrinsicResult
-where
+) -> crate::ApplyExtrinsicResult where
 	Origin: From<Option<AccountId>>,
 	Call: Member + Dispatchable<Origin = Origin>,
 	AccountId: Member + MaybeDisplay,
 	Info: Clone,
 	Extra: SignedExtension<AccountId = AccountId, Call = Call, DispatchInfo = Info>,
 	U: ValidateUnsigned<Call = Call>,
-	D: Dispatcher<Call>,
+	D: Dispatcher<Call, Origin>,
 {
 	let (maybe_who, pre) = if let Some((who, extra)) = signature {
 		let pre = Extra::pre_dispatch(extra, &who, &call, info.clone(), len)?;

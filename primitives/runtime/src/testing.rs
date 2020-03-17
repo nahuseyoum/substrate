@@ -21,7 +21,7 @@ use std::{fmt::Debug, ops::Deref, fmt, cell::RefCell};
 use crate::codec::{Codec, Encode, Decode};
 use crate::traits::{
 	self, Checkable, Applyable, BlakeTwo256, OpaqueKeys,
-	SignedExtension, Dispatchable,
+	SignedExtension, Dispatchable, Member,
 };
 use crate::traits::{Dispatcher, ValidateUnsigned};
 use crate::{generic, KeyTypeId, ApplyExtrinsicResult};
@@ -345,10 +345,8 @@ impl<Call: Codec + Sync + Send, Extra> traits::Extrinsic for TestXt<Call, Extra>
 	}
 }
 
-impl<Origin, Call, Extra, Info> Applyable for TestXt<Call, Extra>
-where
-	Call:
-		'static + Sized + Send + Sync + Clone + Eq + Codec + Debug + Dispatchable<Origin = Origin>,
+impl<Origin, Call, Extra, Info> Applyable for TestXt<Call, Extra> where
+	Call: Member + Dispatchable<Origin = Origin>,
 	Extra: SignedExtension<AccountId = u64, Call = Call, DispatchInfo = Info>,
 	Origin: From<Option<u64>>,
 	Info: Clone,
@@ -367,7 +365,7 @@ where
 
 	/// Executes all necessary logic needed prior to dispatch and deconstructs into function call,
 	/// index and sender.
-	fn apply<U: ValidateUnsigned<Call = Self::Call>, D: Dispatcher<Self::Call>>(
+	fn apply<U: ValidateUnsigned<Call = Self::Call>, D: Dispatcher<Call, Origin>>(
 		self,
 		info: Self::DispatchInfo,
 		len: usize,
