@@ -50,7 +50,7 @@ parameter_types! {
 }
 impl frame_system::Trait for Test {
 	type Origin = Origin;
-	type Call = Call<Test>;
+	type Call = ();
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
@@ -99,7 +99,7 @@ parameter_types! {
 
 impl Trait for Test {
 	type Event = ();
-	type Call = Call<Test>;
+	type Call = ();
 	type SubmitSignedTransaction = SubmitTransaction;
 	type SubmitUnsignedTransaction = SubmitTransaction;
 	type GracePeriod = GracePeriod;

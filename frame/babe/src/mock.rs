@@ -51,7 +51,7 @@ impl frame_system::Trait for Test {
 	type Origin = Origin;
 	type Index = u64;
 	type BlockNumber = u64;
-	type Call = Call<Test>;
+	type Call = ();
 	type Hash = H256;
 	type Version = Version;
 	type Hashing = sp_runtime::traits::BlakeTwo256;

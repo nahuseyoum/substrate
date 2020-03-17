@@ -180,17 +180,6 @@ impl ExtrinsicT for Extrinsic {
 	}
 }
 
-impl Dispatchable for Extrinsic {
-	type Origin = Origin;
-	type Trait = ();
-
-	fn dispatch(self, _: Origin) -> sp_runtime::DispatchResult {
-		match self {
-			_ => panic!("the extrinsic is not supposed to be dispatched"),
-		}
-	}
-}
-
 impl Extrinsic {
 	pub fn transfer(&self) -> &Transfer {
 		match self {

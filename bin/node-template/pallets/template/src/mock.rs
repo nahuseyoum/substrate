@@ -30,7 +30,7 @@ parameter_types! {
 }
 impl system::Trait for Test {
 	type Origin = Origin;
-	type Call = Call;
+	type Call = ();
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
